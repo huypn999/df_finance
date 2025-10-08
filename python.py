@@ -183,3 +183,51 @@ if uploaded_file is not None:
 
 else:
     st.info("Vui lòng tải lên file Excel để bắt đầu phân tích.")
+# --- CHỨC NĂNG MỚI: KHUNG CHAT VỚI GEMINI ---
+st.markdown("---")
+st.header("💬 Trò chuyện với Gemini AI")
+
+# Khởi tạo session state cho lịch sử chat
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+# Ô nhập nội dung chat
+user_input = st.chat_input("Nhập câu hỏi của bạn tại đây...")
+
+# Lấy API key
+api_key = st.secrets.get("GEMINI_API_KEY")
+
+# Khi người dùng gửi tin nhắn
+if user_input and api_key:
+    try:
+        client = genai.Client(api_key=api_key)
+        model_name = "gemini-2.5-flash"
+
+        # Lưu tin nhắn người dùng
+        st.session_state.chat_history.append({"role": "user", "content": user_input})
+
+        # Gọi Gemini API
+        with st.spinner("Gemini đang phản hồi..."):
+            response = client.models.generate_content(
+                model=model_name,
+                contents=user_input
+            )
+            reply = response.text.strip()
+
+        # Lưu phản hồi của AI
+        st.session_state.chat_history.append({"role": "assistant", "content": reply})
+
+    except APIError as e:
+        st.error(f"Lỗi gọi Gemini API: {e}")
+    except Exception as e:
+        st.error(f"Lỗi không xác định: {e}")
+
+elif user_input and not api_key:
+    st.error("Chưa cấu hình GEMINI_API_KEY trong Secrets.")
+
+# Hiển thị lịch sử hội thoại
+for chat in st.session_state.chat_history:
+    if chat["role"] == "user":
+        st.chat_message("user").markdown(chat["content"])
+    else:
+        st.chat_message("assistant").markdown(chat["content"])
